@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🥩 自助餐回本计算器</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --dark: #0a0a0a;
+    --dark2: #141414;
+    --dark3: #1e1e1e;
+    --red: #e63946;
+    --green: #52b788;
+    --text: #f0e6d3;
+    --text-muted: #8a7a66;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Noto Serif SC', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(230,57,70,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 140px;
+    position: relative;
+    z-index: 1;
+  }
+  .header {
+    text-align: center;
+    padding: 32px 20px 20px;
+    border-bottom: 1px solid rgba(201,168,76,0.2);
+  }
+  .header-badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    margin-bottom: 8px;
+    display: block;
+  }
+  .header h1 { font-size: 22px; font-weight: 900; color: var(--text); margin-bottom: 4px; }
+  .header-sub { font-size: 11px; color: var(--text-muted); letter-spacing: 1px; }
+
+.section { padding: 20px 16px 0; }
+.section-title {
+font-size: 11px; letter-spacing: 3px; color: var(–gold);
+font-family: ‘Bebas Neue’, sans-serif; margin-bottom: 12px;
+}
+
+/* 套餐横滑 */
+.plan-scroll {
+display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;
+-webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.plan-scroll::-webkit-scrollbar { display: none; }
+.plan-card {
+flex-shrink: 0;
+background: var(–dark2);
+border: 1px solid rgba(201,168,76,0.15);
+border-radius: 10px;
+padding: 12px 16px;
+cursor: pointer;
+transition: all 0.2s;
+text-align: center;
+min-width: 82px;
+}
+.plan-card.active { border-color: var(–gold); background: rgba(201,168,76,0.08); }
+.plan-card.active .plan-price { color: var(–gold); }
+.plan-price {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 26px; color: var(–text); line-height: 1; transition: color 0.2s;
+}
+.plan-price span { font-size: 12px; font-family: ‘Noto Serif SC’, serif; vertical-align: top; margin-top: 3px; display: inline-block; }
+.plan-name { font-size: 10px; color: var(–text-muted); margin-top: 4px; line-height: 1.4; }
+.plan-card.active .plan-name { color: var(–text); }
+
+/* 进度卡 */
+.progress-section {
+margin: 20px 16px 0;
+background: var(–dark2);
+border: 1px solid rgba(201,168,76,0.2);
+border-radius: 14px;
+padding: 20px;
+position: relative;
+overflow: hidden;
+}
+.progress-section::after {
+content: ‘🥩’;
+position: absolute; right: -5px; top: -8px;
+font-size: 60px; opacity: 0.06; transform: rotate(-15deg);
+}
+.progress-top { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px; }
+.eaten-amount { font-family: ‘Bebas Neue’, sans-serif; font-size: 42px; line-height: 1; color: var(–gold-light); }
+.eaten-amount .unit { font-size: 16px; color: var(–text-muted); font-family: ‘Noto Serif SC’, serif; }
+.progress-label { font-size: 11px; color: var(–text-muted); text-align: right; }
+.progress-label .pct { font-family: ‘Bebas Neue’, sans-serif; font-size: 24px; color: var(–text); display: block; line-height: 1; }
+.progress-bar-bg { height: 8px; background: rgba(255,255,255,0.06); border-radius: 99px; position: relative; margin-bottom: 10px; }
+.progress-bar-fill {
+height: 100%; border-radius: 99px;
+background: linear-gradient(90deg, var(–gold), var(–gold-light));
+transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+position: relative; max-width: 100%;
+}
+.progress-bar-fill.overflow { background: linear-gradient(90deg, var(–green), #74c69d); }
+.progress-bar-fill::after {
+content: ‘’; position: absolute; right: -1px; top: 50%; transform: translateY(-50%);
+width: 14px; height: 14px; border-radius: 50%; background: inherit;
+box-shadow: 0 0 8px rgba(201,168,76,0.6);
+}
+.fun-status { text-align: center; font-size: 22px; margin: 8px 0 4px; }
+.status-text { font-size: 13px; text-align: center; color: var(–text-muted); font-style: italic; }
+.status-text .highlight { color: var(–gold-light); font-style: normal; font-weight: 700; }
+.status-text.winning .highlight { color: var(–green); }
+
+/* 菜品 */
+.dishes-section { padding: 20px 16px 0; }
+.dishes-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+.tab-row { display: flex; gap: 6px; }
+.tab {
+padding: 5px 12px; border-radius: 99px; font-size: 11px;
+border: 1px solid rgba(201,168,76,0.2); cursor: pointer;
+color: var(–text-muted); background: transparent;
+transition: all 0.2s; font-family: ‘Noto Serif SC’, serif;
+}
+.tab.active { background: var(–gold); color: var(–dark); border-color: var(–gold); font-weight: 700; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.category-block { margin-bottom: 16px; }
+.category-label {
+font-size: 10px; letter-spacing: 2px; color: var(–text-muted);
+font-family: ‘Bebas Neue’, sans-serif; margin-bottom: 8px;
+border-left: 2px solid var(–gold); padding-left: 8px;
+}
+.dish-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.dish-item {
+background: var(–dark2);
+border: 1px solid rgba(255,255,255,0.06);
+border-radius: 10px; padding: 10px 10px;
+display: flex; align-items: center; gap: 8px;
+cursor: pointer; transition: all 0.15s;
+user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.dish-item.checked { border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.06); }
+.dish-item.checked .dish-name { color: var(–text); }
+
+.dish-check {
+width: 18px; height: 18px; border-radius: 50%;
+border: 1.5px solid rgba(255,255,255,0.15); flex-shrink: 0;
+display: flex; align-items: center; justify-content: center;
+transition: all 0.15s; font-size: 10px;
+}
+.dish-item.checked .dish-check { background: var(–gold); border-color: var(–gold); color: var(–dark); }
+
+.dish-info { flex: 1; min-width: 0; }
+.dish-name { font-size: 11px; color: var(–text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.15s; line-height: 1.4; }
+.dish-price { font-family: ‘Bebas Neue’, sans-serif; font-size: 14px; color: var(–gold); line-height: 1; margin-top: 2px; }
+.dish-price .us { font-size: 9px; font-family: ‘Noto Serif SC’, serif; color: var(–text-muted); }
+
+.dish-count-ctrl { display: none; align-items: center; flex-shrink: 0; }
+.dish-item.checked .dish-count-ctrl { display: flex; }
+.dish-item.checked .dish-check { display: none; }
+
+.count-btn {
+width: 20px; height: 20px; border-radius: 50%;
+border: 1.5px solid var(–gold); background: transparent;
+color: var(–gold); font-size: 13px; cursor: pointer;
+display: flex; align-items: center; justify-content: center;
+flex-shrink: 0; line-height: 1; transition: all 0.15s;
+-webkit-tap-highlight-color: transparent;
+}
+.count-btn:active { background: var(–gold); color: var(–dark); }
+.count-num { font-family: ‘Bebas Neue’, sans-serif; font-size: 15px; color: var(–text); min-width: 18px; text-align: center; }
+
+/* 底部 */
+.bottom-bar {
+position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+width: 100%; max-width: 480px;
+background: rgba(10,10,10,0.97); backdrop-filter: blur(20px);
+border-top: 1px solid rgba(201,168,76,0.2);
+padding: 12px 16px 28px; z-index: 100;
+}
+.bottom-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.stat-item { text-align: center; }
+.stat-val { font-family: ‘Bebas Neue’, sans-serif; font-size: 20px; line-height: 1; }
+.stat-val.red { color: var(–red); }
+.stat-val.gold { color: var(–gold-light); }
+.stat-val.green { color: var(–green); }
+.stat-label { font-size: 10px; color: var(–text-muted); margin-top: 2px; }
+.reset-btn {
+width: 100%; padding: 12px; background: transparent;
+border: 1px solid rgba(201,168,76,0.3); border-radius: 10px;
+color: var(–text-muted); font-size: 13px;
+font-family: ‘Noto Serif SC’, serif; cursor: pointer; transition: all 0.2s;
+}
+.reset-btn:active { background: rgba(201,168,76,0.1); color: var(–gold); }
+</style>
+
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <span class="header-badge">一猪仁 · 寿喜烧</span>
+    <h1>自助餐回本计算器</h1>
+    <div class="header-sub">吃了多少 · 回本没有 · 心里有数</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">SELECT PLAN · 选择套餐</div>
+    <div class="plan-scroll">
+      <div class="plan-card" data-price="149" onclick="selectPlan(this)">
+        <div class="plan-price"><span>¥</span>149</div>
+        <div class="plan-name">优选牛肉</div>
+      </div>
+      <div class="plan-card" data-price="179" onclick="selectPlan(this)">
+        <div class="plan-price"><span>¥</span>179</div>
+        <div class="plan-name">优选海鲜牛肉</div>
+      </div>
+      <div class="plan-card active" data-price="219" onclick="selectPlan(this)">
+        <div class="plan-price"><span>¥</span>219</div>
+        <div class="plan-name">M级和牛轻享</div>
+      </div>
+      <div class="plan-card" data-price="249" onclick="selectPlan(this)">
+        <div class="plan-price"><span>¥</span>249</div>
+        <div class="plan-name">和牛三吃高阶</div>
+      </div>
+      <div class="plan-card" data-price="299" onclick="selectPlan(this)">
+        <div class="plan-price"><span>¥</span>299</div>
+        <div class="plan-name">刺身·和牛顶配</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="progress-section">
+    <div class="progress-top">
+      <div>
+        <div class="eaten-amount" id="eatenAmt">0<span class="unit"> 元</span></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">已吃价值</div>
+      </div>
+      <div class="progress-label">
+        <span class="pct" id="pctText">0%</span>
+        回本进度
+      </div>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
+    </div>
+    <div class="fun-status" id="funStatus">🪑</div>
+    <div class="status-text" id="statusText">还没开始吃，先把筷子拿好</div>
+  </div>
+
+  <div class="dishes-section">
+    <div class="dishes-header">
+      <div class="section-title" style="margin-bottom:0">MENU · 今天吃了啥</div>
+      <div class="tab-row">
+        <button class="tab active" onclick="switchTab(event,'all')">全部</button>
+        <button class="tab" onclick="switchTab(event,'meat')">肉类</button>
+        <button class="tab" onclick="switchTab(event,'seafood')">海鲜</button>
+        <button class="tab" onclick="switchTab(event,'other')">其他</button>
+      </div>
+    </div>
+    <div id="tab-all" class="tab-content active"></div>
+    <div id="tab-meat" class="tab-content"></div>
+    <div id="tab-seafood" class="tab-content"></div>
+    <div id="tab-other" class="tab-content"></div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <div class="bottom-stats">
+    <div class="stat-item">
+      <div class="stat-val gold" id="statPaid">¥219</div>
+      <div class="stat-label">套餐价格</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val gold" id="statEaten">¥0</div>
+      <div class="stat-label">已吃价值</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val red" id="statLeft">-¥219</div>
+      <div class="stat-label">还差 / 已赚</div>
+    </div>
+  </div>
+  <button class="reset-btn" onclick="resetAll()">🔄 清空重来</button>
+</div>
+
+<script>
+const ALL_DISHES = [
+  // 149套餐 · 肉类
+  { id:'beef-rib',     name:'优选牛排肉',      price:22, cat:'meat',    minPlan:149, emoji:'🥩' },
+  { id:'beef-brain',   name:'雪花牛上脑',      price:27, cat:'meat',    minPlan:149, emoji:'🥩' },
+  { id:'beef-opt',     name:'优选牛肉',        price:20, cat:'meat',    minPlan:149, emoji:'🥩' },
+  { id:'lamb',         name:'草原羊肉',        price:18, cat:'meat',    minPlan:149, emoji:'🐑' },
+  { id:'pork',         name:'优选猪梅肉',      price:14, cat:'meat',    minPlan:149, emoji:'🐷' },
+  { id:'duck-int',     name:'鸭肠',            price:12, cat:'meat',    minPlan:149, emoji:'🦆' },
+  { id:'chicken',      name:'黄油鸡',          price:15, cat:'meat',    minPlan:149, emoji:'🐔' },
+  { id:'duck-flower',  name:'鸭胗花',          price:11, cat:'meat',    minPlan:149, emoji:'🦆' },
+  { id:'frog',         name:'牛蛙腿',          price:20, cat:'meat',    minPlan:149, emoji:'🐸' },
+  { id:'beef-slide',   name:'牛肉滑',          price:14, cat:'meat',    minPlan:149, emoji:'🥩' },
+  { id:'duck-wing',    name:'热卤鸭翅',        price:13, cat:'meat',    minPlan:149, emoji:'🍗' },
+  { id:'duck-neck',    name:'热卤鸭脖',        price:12, cat:'meat',    minPlan:149, emoji:'🍗' },
+  // 149套餐 · 海鲜
+  { id:'shrimp-slide', name:'虾滑',            price:15, cat:'seafood', minPlan:149, emoji:'🦐' },
+  // 149套餐 · 其他
+  { id:'meatball',     name:'蔬菜丸滑(40+款)', price:11, cat:'other',   minPlan:149, emoji:'🍡' },
+  { id:'drink',        name:'品牌饮品(30+款)', price:14, cat:'other',   minPlan:149, emoji:'🥤' },
+  { id:'dessert',      name:'甜品冰淇淋(30+款)',price:13,cat:'other',   minPlan:149, emoji:'🍨' },
+  { id:'fruit',        name:'水果小食(10+款)', price:8,  cat:'other',   minPlan:149, emoji:'🍓' },
+
+  // 179套餐 · 肉类新增
+  { id:'beef-belly',   name:'优选胸腹肉',      price:24, cat:'meat',    minPlan:179, emoji:'🥩' },
+  { id:'tripe',        name:'牛百叶',          price:16, cat:'meat',    minPlan:179, emoji:'🥩' },
+  // 179套餐 · 海鲜新增
+  { id:'shrimp-boil',  name:'白灼小龙虾',      price:24, cat:'seafood', minPlan:179, emoji:'🦞' },
+  { id:'oyster-3',     name:'清蒸生蚝三吃',    price:28, cat:'seafood', minPlan:179, emoji:'🦪' },
+  { id:'shrimp-salt',  name:'椒盐大虾',        price:22, cat:'seafood', minPlan:179, emoji:'🦐' },
+  { id:'shrimp-big',   name:'大海虾',          price:24, cat:'seafood', minPlan:179, emoji:'🦐' },
+  { id:'shrimp-luo',   name:'罗氏对虾',        price:26, cat:'seafood', minPlan:179, emoji:'🦐' },
+  { id:'abalone',      name:'鲜活鲍鱼',        price:30, cat:'seafood', minPlan:179, emoji:'🐚' },
+  { id:'clam',         name:'文蛤',            price:16, cat:'seafood', minPlan:179, emoji:'🐚' },
+  { id:'squid',        name:'芋艿鱿鱼',        price:18, cat:'seafood', minPlan:179, emoji:'🦑' },
+  { id:'razor',        name:'黑竹蛏',          price:20, cat:'seafood', minPlan:179, emoji:'🐚' },
+
+  // 219套餐 · 肉类新增
+  { id:'wagyu-top',    name:'极佳级上脑',      price:38, cat:'meat',    minPlan:219, emoji:'🥩' },
+  { id:'wagyu-m',      name:'M级和牛',         price:34, cat:'meat',    minPlan:219, emoji:'🥩' },
+  { id:'wagyu-knee',   name:'和牛牛腱子',      price:25, cat:'meat',    minPlan:219, emoji:'🥩' },
+  { id:'beef-chuck',   name:'优选牛板腱',      price:20, cat:'meat',    minPlan:219, emoji:'🥩' },
+  { id:'wagyu-gift',   name:'和牛三吃(每桌赠)',price:42, cat:'meat',    minPlan:219, emoji:'🎁' },
+  // 219套餐 · 其他新增
+  { id:'liver',        name:'金砖肥肝',        price:18, cat:'other',   minPlan:219, emoji:'🍖' },
+  { id:'bread',        name:'蜂蜜烤馒头',      price:11, cat:'other',   minPlan:219, emoji:'🍞' },
+  { id:'shrimp-dried', name:'梅干菜小虾',      price:14, cat:'other',   minPlan:219, emoji:'🍤' },
+
+  // 249套餐 · 肉类新增
+  { id:'wagyu-3eat',   name:'和牛三吃',        price:45, cat:'meat',    minPlan:249, emoji:'🥩' },
+  { id:'wagyu-89',     name:'M8-9和牛',        price:48, cat:'meat',    minPlan:249, emoji:'🥩' },
+  // 249套餐 · 海鲜新增
+  { id:'lobster',      name:'清蒸菜莉蒸龙虾',  price:42, cat:'seafood', minPlan:249, emoji:'🦞' },
+  { id:'shrimp-blk',   name:'黑胡椒罗氏虾',    price:30, cat:'seafood', minPlan:249, emoji:'🦐' },
+  { id:'oyster-grill', name:'烤牡蛎生蚝',      price:26, cat:'seafood', minPlan:249, emoji:'🦪' },
+  // 249套餐 · 其他新增
+  { id:'beef-fat',     name:'火夹肥牛',        price:20, cat:'other',   minPlan:249, emoji:'🥩' },
+  { id:'cod',          name:'鳕鱼子酱薯片',    price:22, cat:'other',   minPlan:249, emoji:'🐟' },
+  { id:'lamb-fr',      name:'法式低温羊排',    price:28, cat:'other',   minPlan:249, emoji:'🍖' },
+
+  // 299套餐 · 海鲜新增
+  { id:'sashimi',      name:'刺身拼盘畅吃',    price:55, cat:'seafood', minPlan:299, emoji:'🐟' },
+  // 299套餐 · 其他新增
+  { id:'wagyu-brn',    name:'和牛上脑心(赠)',  price:35, cat:'other',   minPlan:299, emoji:'🎁' },
+];
+
+const state = { planPrice: 219, counts: {}, activeTab: 'all' };
+
+function getAvailable() {
+  return ALL_DISHES.filter(d => d.minPlan <= state.planPrice);
+}
+
+function renderDishes() {
+  const dishes = getAvailable();
+  const cats = [
+    { id:'meat',    label:'🥩 肉类' },
+    { id:'seafood', label:'🦐 海鲜' },
+    { id:'other',   label:'🍡 其他' },
+  ];
+
+  // all tab
+  document.getElementById('tab-all').innerHTML = cats.map(cat => {
+    const items = dishes.filter(d => d.cat === cat.id);
+    return items.length ? renderCat(cat.label, items) : '';
+  }).join('');
+
+  cats.forEach(cat => {
+    const items = dishes.filter(d => d.cat === cat.id);
+    document.getElementById('tab-' + cat.id).innerHTML = items.length ? renderCat(cat.label, items) : '<div style="color:var(--text-muted);font-size:12px;padding:20px;text-align:center">当前套餐暂无此类菜品</div>';
+  });
+}
+
+function renderCat(label, items) {
+  return `<div class="category-block">
+    <div class="category-label">${label}</div>
+    <div class="dish-grid">${items.map(d => {
+      const cnt = state.counts[d.id] || 1;
+      const checked = !!state.counts[d.id];
+      return `<div class="dish-item${checked?' checked':''}" id="dish-${d.id}" onclick="toggleDish('${d.id}')">
+        <div class="dish-check">✓</div>
+        <div class="dish-info">
+          <div class="dish-name">${d.emoji} ${d.name}</div>
+          <div class="dish-price">¥${d.price}<span class="us">/份</span></div>
+        </div>
+        <div class="dish-count-ctrl">
+          <button class="count-btn" onclick="changeCount(event,'${d.id}',-1)">−</button>
+          <span class="count-num" id="cnt-${d.id}">${cnt}</span>
+          <button class="count-btn" onclick="changeCount(event,'${d.id}',1)">+</button>
+        </div>
+      </div>`;
+    }).join('')}</div>
+  </div>`;
+}
+
+function toggleDish(id) {
+  if (state.counts[id]) delete state.counts[id];
+  else state.counts[id] = 1;
+  renderDishes();
+  updateAll();
+}
+
+function changeCount(e, id, delta) {
+  e.stopPropagation();
+  const next = (state.counts[id] || 1) + delta;
+  if (next <= 0) delete state.counts[id];
+  else state.counts[id] = next;
+  renderDishes();
+  updateAll();
+}
+
+function updateAll() {
+  const dishes = getAvailable();
+  let total = 0;
+  Object.entries(state.counts).forEach(([id, cnt]) => {
+    const d = dishes.find(x => x.id === id);
+    if (d) total += d.price * cnt;
+  });
+
+  const pct = state.planPrice > 0 ? Math.min(Math.round(total / state.planPrice * 100), 999) : 0;
+  const diff = total - state.planPrice;
+
+  document.getElementById('eatenAmt').innerHTML = `${total}<span class="unit"> 元</span>`;
+  document.getElementById('pctText').textContent = pct + '%';
+  document.getElementById('statPaid').textContent = '¥' + state.planPrice;
+  document.getElementById('statEaten').textContent = '¥' + total;
+
+  const diffEl = document.getElementById('statLeft');
+  diffEl.textContent = (diff >= 0 ? '+' : '-') + '¥' + Math.abs(diff);
+  diffEl.className = 'stat-val ' + (diff >= 0 ? 'green' : 'red');
+
+  const bar = document.getElementById('progressBar');
+  bar.style.width = Math.min(pct, 100) + '%';
+  bar.className = 'progress-bar-fill' + (pct >= 100 ? ' overflow' : '');
+
+  const funEl = document.getElementById('funStatus');
+  const statusEl = document.getElementById('statusText');
+  let emoji, msg, cls = 'status-text';
+
+  if (pct === 0)       { emoji='🪑'; msg='还没开始吃，先把筷子拿好'; }
+  else if (pct < 30)   { emoji='😐'; msg=`才回本 <span class="highlight">${pct}%</span>，连锅底钱都没捞回来`; }
+  else if (pct < 60)   { emoji='🍖'; msg=`已回本 <span class="highlight">${pct}%</span>，加把劲，别客气`; }
+  else if (pct < 90)   { emoji='😤'; msg=`<span class="highlight">${pct}%</span>了！冲！别停！`; }
+  else if (pct < 100)  { emoji='🔥'; msg=`就差 <span class="highlight">¥${Math.abs(diff)}</span> 回本，再来一盘！`; }
+  else if (pct < 150)  { emoji='💰'; msg=`已赚回 <span class="highlight">¥${diff}</span>，今天赚到了！`; cls='status-text winning'; }
+  else                 { emoji='🏆'; msg=`狂赚 <span class="highlight">¥${diff}</span>！你是自助餐之神！`; cls='status-text winning'; }
+
+  funEl.textContent = emoji;
+  statusEl.className = cls;
+  statusEl.innerHTML = msg;
+}
+
+function selectPlan(el) {
+  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  state.planPrice = parseInt(el.dataset.price);
+  const avail = getAvailable().map(d => d.id);
+  Object.keys(state.counts).forEach(id => { if (!avail.includes(id)) delete state.counts[id]; });
+  renderDishes();
+  updateAll();
+}
+
+function switchTab(e, tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function resetAll() {
+  state.counts = {};
+  renderDishes();
+  updateAll();
+}
+
+renderDishes();
+updateAll();
+</script>
+
+</body>
+</html>
